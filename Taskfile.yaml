@@ -1,0 +1,55 @@
+version: 3
+
+tasks:
+  default:
+    - task: init
+    - task: fmt
+    - task: lint
+    - task: test
+    - task: test-mp
+
+  init:
+    desc: Init environment.
+    cmds:
+      - poetry install
+      - pre-commit install --install-hooks
+      - pre-commit install --install-hooks --hook-type commit-msg
+
+  update:
+    desc: Update environment.
+    cmds:
+      - poetry update
+      - pre-commit autoupdate
+
+  fmt:
+    desc: Run formatters.
+    cmds:
+      - poetry run black .
+      - poetry run isort .
+      - pre-commit run -a prettier
+
+  lint:
+    desc: Run linters.
+    cmds:
+      - poetry run flake8 --config .flake8
+      - poetry run dmypy run --timeout 3600 src
+
+  test:
+    desc: Run tests.
+    cmds:
+      - poetry run pytest {{ .COVERAGE }}
+    vars:
+      COVERAGE: |-
+        --cov-report=term-missing --cov-report=xml --cov=src
+
+  test-mp:
+    desc: Run multi process tests.
+    cmds:
+      - rm -rf $PROMETHEUS_MULTIPROC_DIR
+      - mkdir -p $PROMETHEUS_MULTIPROC_DIR
+      - poetry run pytest -k test_multiproc {{ .COVERAGE }}
+    vars:
+      COVERAGE: |-
+        --cov-append --cov-report=term-missing --cov-report=xml --cov=src
+    env:
+      PROMETHEUS_MULTIPROC_DIR: /tmp/pfi-tests/multiproc
